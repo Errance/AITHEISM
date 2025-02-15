@@ -96,6 +96,89 @@ Response example:
 }
 ```
 
+### 4. Agora WebSocket
+```http
+WebSocket /ws/agora
+```
+
+Real-time connection for receiving Agora messages with pagination support.
+
+Message Types:
+
+1. Get Messages
+```json
+// Request:
+{
+  "type": "get_messages",
+  "page": 1,           // Required, min: 1
+  "page_size": 20,     // Required, min: 1, max: 100
+  "round_num": null    // Optional
+}
+
+// Response:
+{
+  "messages": [
+    {
+      "model": "gpt",
+      "content": "I propose that artificial intelligence can create...",
+      "timestamp": "2025-02-13T16:41:58.017586",
+      "round_num": 1
+    }
+  ],
+  "currentRound": 1,
+  "roundStatus": "ongoing",
+  "pagination": {
+    "total": 100,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 5,
+    "has_more": true
+  },
+  "debug_info": {
+    "messages_per_round": {
+      "1": 50,
+      "2": 50
+    },
+    "total_messages": 100,
+    "latest_round": 2,
+    "files_found": [1, 2],
+    "max_rounds": 10
+  }
+}
+
+// Error Response:
+{
+  "error": "Error message, e.g., 'Invalid message format: page must be greater than 0'"
+}
+```
+
+Example Usage:
+```javascript
+const ws = new WebSocket('ws://167.172.87.8:9001/ws/agora');
+
+ws.send(JSON.stringify({
+  type: 'get_messages',
+  page: 1,
+  page_size: 20
+}));
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.error) {
+    console.error('Error:', data.error);
+    return;
+  }
+  const { messages, pagination } = data;
+  if (pagination.has_more) {
+    ws.send(JSON.stringify({
+      type: 'get_messages',
+      page: pagination.page + 1,
+      page_size: pagination.page_size
+    }));
+  }
+};
+```
+
 ## Error Handling
 The API uses standard HTTP status codes:
 - 200: Success

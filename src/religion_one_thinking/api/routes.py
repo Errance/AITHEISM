@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from datetime import datetime
 from ..discussion.orchestrator import DiscussionOrchestrator
 from ..utils.config import load_config
@@ -61,6 +61,12 @@ class AgoraResponse(BaseModel):
 class DiscussRequest(BaseModel):
     question: str
 
+class AgoraMessage(BaseModel):
+    type: str  # "get_messages"
+    page: int = Query(1, ge=1)
+    page_size: int = Query(20, ge=1, le=100)
+    round_num: Optional[int] = None
+
 # 创建服务实例
 api_service = APIService()
 
@@ -103,6 +109,26 @@ def read_round_data(round_num: int) -> dict:
     except Exception as e:
         print(f"Error reading {file_path}: {str(e)}")
         return {}
+
+class AgoraWebSocketManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except WebSocketDisconnect:
+                self.disconnect(connection)
+
+agora_manager = AgoraWebSocketManager()
 
 @app.get("/agora")
 async def get_agora(
@@ -178,6 +204,38 @@ async def get_agora(
     except Exception as e:
         logger.error(f"Error in get_agora: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.websocket("/ws/agora")
+async def agora_websocket(websocket: WebSocket):
+    """WebSocket endpoint for Agora messages with pagination"""
+    await agora_manager.connect(websocket)
+    try:
+        while True:
+            try:
+                data = await websocket.receive_json()
+                try:
+                    message = AgoraMessage(**data)
+                    if message.type == "get_messages":
+                        response = await get_agora(
+                            page=message.page,
+                            page_size=message.page_size,
+                            round_num=message.round_num
+                        )
+                        await websocket.send_json(response)
+                    else:
+                        await websocket.send_json({
+                            "error": f"Unknown message type: {message.type}"
+                        })
+                except ValidationError as e:
+                    await websocket.send_json({
+                        "error": f"Invalid message format: {str(e)}"
+                    })
+            except Exception as e:
+                await websocket.send_json({
+                    "error": f"Error processing message: {str(e)}"
+                })
+    except WebSocketDisconnect:
+        agora_manager.disconnect(websocket)
 
 # Get all argument nodes
 @app.get("/discussion/nodes")
