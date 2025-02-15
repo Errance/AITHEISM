@@ -1,0 +1,58 @@
+api:
+  openrouter:
+    base_url: "https://openrouter.ai/api/v1"
+    timeout: 60
+    max_tokens: 2048
+    temperature: 0.7
+    retry_attempts: 3
+    retry_delay: 1
+    headers:
+      HTTP-Referer: "https://github.com/Errance/AITHEISM"
+      X-Title: "AITHEISM"
+      X-Model-Family: "all"
+
+discussion:
+  max_rounds: 2000
+  round_interval: 600
+  summary_interval: 5
+  save_path: "discussions"
+  auto_save: true
+  save_format: "json"
+  
+logging:
+  level: "INFO"
+  file_path: "./logs/discussion.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+models:
+  # Main discussion participants
+  gpt:
+    id: "openai/gpt-4o-mini"
+    name: "GPT"
+    temperature: 0.7
+    max_tokens: 2048
+  claude:
+    id: "anthropic/claude-3.5-turbo"
+    name: "Claude"
+    temperature: 0.7
+    max_tokens: 2048
+  gemini:
+    id: "google/gemini-2.0-flash-001"
+    name: "Gemini"
+    temperature: 0.7
+  deepseek:
+    id: "deepseek/deepseek-r1"
+    name: "DeepSeek"
+    temperature: 0.7
+  qwen:
+    id: "qwen/qwen-2.5-72b-instruct"
+    name: "Qwen"
+    temperature: 0.7
+    
+  # Context processor for handling discussion history and analysis
+  context_processor:
+    id: "openai/gpt-4o-mini"
+    name: "Context Processor"
+    temperature: 0.3
+    max_tokens: 500
+    system_prompt: "You are a context processor that helps analyze and summarize discussions..." 
