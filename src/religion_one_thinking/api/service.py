@@ -19,19 +19,39 @@ class APIService:
         self.round_duration = 180  # 3 minutes in seconds
         self.discussion_service = DiscussionService()
         
-    async def get_current_discussion(self, round_num: Optional[int] = None) -> dict:
-        """获取当前或指定轮次的讨论"""
+    async def get_current_discussion(self, round_num: Optional[int] = None, page: int = 1, page_size: int = 20) -> dict:
+        """获取当前或指定轮次的讨论
+        
+        Args:
+            round_num: Optional round number to get discussion for
+            page: Page number for messages (1-based)
+            page_size: Number of messages per page
+        """
         try:
-            state = await self.discussion_service.get_current_state()
+            state = await self.discussion_service.get_current_state(page_size=page_size, page=page)
             return {
                 "messages": state['messages'],
                 "currentRound": state['round_num'],
                 "roundStatus": state['status'],
                 "nextRoundStart": datetime.utcnow() if state['status'] == "completed" else None,
-                "remainingTime": 0
+                "remainingTime": 0,
+                "pagination": state['pagination']
             }
         except Exception as e:
             print(f"Error in get_current_discussion: {str(e)}")
+            raise
+        
+    async def get_more_messages(self, page: int = 1, page_size: int = 20) -> dict:
+        """获取更多消息用于无限滚动
+        
+        Args:
+            page: Page number (1-based)
+            page_size: Number of messages per page
+        """
+        try:
+            return await self.discussion_service.get_more_messages(page_size=page_size, page=page)
+        except Exception as e:
+            print(f"Error in get_more_messages: {str(e)}")
             raise
         
     async def get_discussion_nodes(self) -> List[dict]:

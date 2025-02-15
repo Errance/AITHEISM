@@ -23,18 +23,42 @@ app.add_middleware(
 api_service = APIService()
 
 @app.get("/api/discussion/current")
-async def get_current_discussion():
-    """获取当前讨论状态"""
+async def get_current_discussion(page: int = 1, page_size: int = 20):
+    """获取当前讨论状态
+    
+    Args:
+        page: Page number for messages (1-based)
+        page_size: Number of messages per page
+    """
     try:
-        return await api_service.get_current_discussion()
+        return await api_service.get_current_discussion(page=page, page_size=page_size)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/discussion/round/{round_num}")
-async def get_round_discussion(round_num: int):
-    """获取特定轮次的讨论"""
+async def get_round_discussion(round_num: int, page: int = 1, page_size: int = 20):
+    """获取特定轮次的讨论
+    
+    Args:
+        round_num: Round number to get discussion for
+        page: Page number for messages (1-based)
+        page_size: Number of messages per page
+    """
     try:
-        return await api_service.get_current_discussion(round_num)
+        return await api_service.get_current_discussion(round_num=round_num, page=page, page_size=page_size)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/discussion/messages")
+async def get_more_messages(page: int = 1, page_size: int = 20):
+    """获取更多消息用于无限滚动
+    
+    Args:
+        page: Page number (1-based)
+        page_size: Number of messages per page
+    """
+    try:
+        return await api_service.get_more_messages(page=page, page_size=page_size)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
