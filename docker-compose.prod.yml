@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  main:
+    build: .
+    networks:
+      - networkBridge
+    volumes:
+      - ./discussions:/app/discussions
+      - ./memories:/app/memories
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    command: python -m src.religion_one_thinking.main
+
+  api:
+    build: .
+    networks:
+      - networkBridge
+    ports:
+      - "9001:9001"
+    volumes:
+      - ./discussions:/app/discussions
+      - ./memories:/app/memories
+      - ./logs:/app/logs
+    environment:
+      - PYTHONPATH=/app
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    command: uvicorn src.religion_one_thinking.api.routes:app --host 0.0.0.0 --port 9001
+
+networks:
+  networkBridge:
+    external: true
