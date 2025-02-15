@@ -1,0 +1,38 @@
+name: CI/CD Workflow Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check:
+    runs-on: aitheism-dev
+    steps:
+      - name: Check
+        run: sudo ~/check.sh
+
+  build:
+    runs-on: aitheism-dev
+
+    needs: check
+
+    env:
+      ENV_PROD: ${{ secrets.ENV_PROD }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.x
+
+      - name: Copy ENV
+        run: |
+          echo "$ENV_PROD" > .env
+
+      - name: Build and tag Docker image
+        run: |
+          docker compose -f docker-compose.prod.yml up -d --build --force-recreate
